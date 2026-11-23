@@ -1,0 +1,13 @@
+services:
+  paper-orchestra:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./demo_logs:/opt/app/demo_logs
+    init: true
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
