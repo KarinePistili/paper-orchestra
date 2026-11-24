@@ -6,3 +6,4 @@ datasets/*
 paper_output*
 *.zip
 demo_logs/
+raw_materials/
