@@ -77,6 +77,16 @@ python paper_writing_cli.py \
 *   `--reflection_model_name`: LLM for reflection agents.
 *   `--image_model_name`: Image generation model for the plotting agent (default: `gemini-3-pro-image`).
 
+Each paper-generation run writes an `api_requests_<timestamp>_<id>.json` report
+in its output directory, including application-level Gemini, OpenAI and Semantic
+Scholar attempts grouped by stage, operation, model and component. Entries with
+the same request ID are retries of one logical call; repeated calls with identical
+payloads are not compared. The report includes token counts when the API returns
+them, but no cost estimate: pricing, billing tier and tool charges are not
+available to the application. SDK-internal retries and Google Search grounding
+subrequests are not counted. Prompts, responses and credentials are not stored.
+The report is updated during execution, including failed or interrupted runs.
+
 ### Interactive Demo
 
 We provide an interactive Streamlit demo for the paper generation pipeline. For instructions on how to run and use it, please refer to the [README.md](frontend/README.md) in the `frontend` directory.

@@ -27,12 +27,14 @@ from methods.agents.literature_review_agent import HybridLiteratureAgent
 from methods.agents.section_writing_agent import SectionWritingAgent
 from methods.agents.content_refinement_agent import ContentRefinementAgent
 from methods.agents.plotting_agent import PlottingAgent
+from utils.api_reporting import report_api_run, submit_with_context
 
 from utils.common_utils import (
     create_log_folder,
 )
 
 
+@report_api_run
 def write_single_paper(
     base_dir,
     latex_template_dir,
@@ -150,8 +152,8 @@ def write_single_paper(
 
             _t1 = time.time()
             with ThreadPoolExecutor(max_workers=2) as executor:
-                future_lit = executor.submit(run_literature_agent)
-                future_plot = executor.submit(run_plotting_agent)
+                future_lit = submit_with_context(executor, run_literature_agent)
+                future_plot = submit_with_context(executor, run_plotting_agent)
 
                 future_lit.result()
                 plot_results = future_plot.result()

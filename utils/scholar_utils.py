@@ -19,8 +19,10 @@ import time
 from typing import List, Dict, Union, Optional
 from thefuzz import fuzz  # type: ignore
 import datetime
+import uuid
 
 from dotenv import load_dotenv  # type: ignore
+from utils.api_reporting import api_attempt
 
 cur_dir = os.path.dirname(os.path.realpath(__file__))
 load_dotenv(os.path.join(cur_dir, "../.env"))
@@ -59,16 +61,20 @@ def s2_title_search(
             return True
 
     try:
-        rsp = requests.get(
-            "https://api.semanticscholar.org/graph/v1/paper/search",
-            headers=headers,
-            params={
-                "query": title_query,
-                "limit": 3,
-                "fields": "title,authors,venue,year,abstract,citationCount,journal,publicationDate",
-            },
-            timeout=5,
-        )
+        with api_attempt(
+            "semantic_scholar", "paper_search", None, uuid.uuid4().hex, 1
+        ) as tracked:
+            rsp = requests.get(
+                "https://api.semanticscholar.org/graph/v1/paper/search",
+                headers=headers,
+                params={
+                    "query": title_query,
+                    "limit": 3,
+                    "fields": "title,authors,venue,year,abstract,citationCount,journal,publicationDate",
+                },
+                timeout=5,
+            )
+            tracked.set_response(rsp)
         if rsp.status_code != 200:
             return None
         results = rsp.json().get("data", [])

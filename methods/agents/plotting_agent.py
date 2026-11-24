@@ -18,6 +18,7 @@ import base64
 import concurrent.futures
 
 from utils.common_utils import load_md_file
+from utils.api_reporting import api_stage, submit_with_context
 from utils.paper_banana_utils import (
     retrieve_few_shot_examples,
     predict_figure_content,
@@ -212,6 +213,7 @@ class PlottingAgent:
         self.image_model_name = image_model_name
         self.max_critic_rounds = max_critic_rounds
 
+    @api_stage("figure_generation")
     def run(
         self,
         outline_json_path: str,
@@ -226,7 +228,8 @@ class PlottingAgent:
         results = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = {
-                executor.submit(
+                submit_with_context(
+                    executor,
                     process_single_figure,
                     plan,
                     raw_materials_dir,

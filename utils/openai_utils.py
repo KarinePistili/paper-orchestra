@@ -19,11 +19,13 @@ import time
 import os
 import sys
 import threading
+import uuid
 import cv2  # type: ignore
 import base64
 
 from openai import OpenAI  # type: ignore
 from dotenv import load_dotenv  # type: ignore
+from utils.api_reporting import api_attempt
 
 dot_file = os.path.join(os.path.dirname(__file__), "../.env")
 load_dotenv(dot_file)
@@ -122,6 +124,7 @@ def call_openai_models_with_content(
     raw_response = None
     parsed_response = None
     openai_client = get_openai_client()
+    request_id = uuid.uuid4().hex
 
     for attempt in range(max_retries):
         try:
@@ -136,11 +139,15 @@ def call_openai_models_with_content(
                 f"Calling OpenAI API (model={model_name}, attempt={attempt + 1}/{max_retries}).",
                 flush=True,
             )
-            response = openai_client.chat.completions.create(
-                model=model_name,
-                messages=messages,
-                **generation_configs,
-            )
+            with api_attempt(
+                "openai", "chat_completions", model_name, request_id, attempt + 1
+            ) as tracked:
+                response = openai_client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    **generation_configs,
+                )
+                tracked.set_response(response)
             raw_response = response.choices[0].message.content
             parsed_response = result_parsing_func(raw_response)
 

@@ -24,12 +24,14 @@ from methods.agents.outline_agent import OutlineAgent
 from methods.agents.literature_review_agent import HybridLiteratureAgent
 from methods.agents.section_writing_agent import SectionWritingAgent
 from methods.agents.content_refinement_agent import ContentRefinementAgent
+from utils.api_reporting import report_api_run
 
 from utils.common_utils import (
     create_log_folder,
 )
 
 
+@report_api_run
 def write_single_paper(
     base_dir,
     latex_template_dir,

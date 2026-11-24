@@ -19,6 +19,7 @@ import shutil
 from google.genai import types  # type: ignore
 
 from utils.pdf_utils import compile_latex, load_paper, pdf_to_grid_images
+from utils.api_reporting import api_stage
 from utils.gemini_utils import (
     call_gemini_with_contents,
     parse_gemini_json_latex_response,
@@ -198,6 +199,7 @@ Respond in JSON format with the following structure:
                 scores[axis] = 0.0
         return scores
 
+    @api_stage("content_refinement")
     def run(self, texfile_path: str) -> str:
         """
         Main execution loop:

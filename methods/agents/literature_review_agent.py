@@ -27,6 +27,7 @@ from methods.prompts.literature_review_agent import (
 )
 from utils.gemini_utils import call_gemini_with_contents, parse_gemini_latex_results
 from utils.scholar_utils import s2_title_search
+from utils.api_reporting import api_stage, submit_with_context
 
 
 class CandidatePaper(BaseModel):
@@ -94,6 +95,7 @@ class HybridLiteratureAgent:
         with self.print_lock:
             print(message)
 
+    @api_stage("literature_review")
     def run(
         self,
         outline_path: str,
@@ -177,7 +179,8 @@ class HybridLiteratureAgent:
 
         with ThreadPoolExecutor(max_workers=10) as executor:  # Fast for Google Search!
             future_to_task = {
-                executor.submit(
+                submit_with_context(
+                    executor,
                     self._process_search_task_google, task, outline, cutoff_date
                 ): task
                 for task in active_tasks

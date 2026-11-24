@@ -23,8 +23,10 @@ import os
 import mimetypes
 import base64
 import threading
+import uuid
 
 import dotenv
+from utils.api_reporting import api_attempt
 
 dot_file = os.path.join(os.path.dirname(__file__), "../.env")
 dotenv.load_dotenv(dot_file)
@@ -172,17 +174,23 @@ def call_gemini_with_contents(
     parsed_response = None
 
     genai_client = get_genai_client()
+    request_id = uuid.uuid4().hex
     for attempt in range(max_retries):
         try:
             print(
                 f"Calling Gemini API (model={model_name}, attempt={attempt + 1}/{max_retries}).",
                 flush=True,
             )
-            response = genai_client.models.generate_content(
-                model=model_name,
-                contents=contents,
-                config=types.GenerateContentConfig(**generation_configs),
-            )
+            config = types.GenerateContentConfig(**generation_configs)
+            with api_attempt(
+                "gemini", "generate_content", model_name, request_id, attempt + 1
+            ) as tracked:
+                response = genai_client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=config,
+                )
+                tracked.set_response(response)
 
             if not response or not hasattr(response, "text") or response.text is None:
                 raise ValueError("Incomplete response from Gemini API or empty text")
@@ -297,6 +305,7 @@ def generate_image_with_gemini(
         generation_configs = {}
 
     genai_client = get_genai_client()
+    request_id = uuid.uuid4().hex
     for attempt in range(max_retries):
         try:
             config_args = {
@@ -313,11 +322,17 @@ def generate_image_with_gemini(
                 f"Calling Gemini API for image generation (model={model_name}, attempt={attempt + 1}/{max_retries}).",
                 flush=True,
             )
-            response = genai_client.models.generate_content(
-                model=model_name,
-                contents=[types.Part.from_text(text=prompt)],
-                config=types.GenerateContentConfig(**config_args),
-            )
+            contents = [types.Part.from_text(text=prompt)]
+            config = types.GenerateContentConfig(**config_args)
+            with api_attempt(
+                "gemini", "generate_image", model_name, request_id, attempt + 1
+            ) as tracked:
+                response = genai_client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=config,
+                )
+                tracked.set_response(response)
             if hasattr(response, "candidates") and response.candidates:
                 if (
                     len(response.candidates) > 0

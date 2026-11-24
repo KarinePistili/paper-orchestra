@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from utils.common_utils import load_md_file
+from utils.api_reporting import api_stage
 from utils.gemini_utils import call_gemini_with_contents
 import json
 from google.genai import types  # type: ignore
@@ -27,6 +28,7 @@ class OutlineAgent:
         self.model_name = model_name
         self.cutoff_date = cutoff_date
 
+    @api_stage("outline")
     def run(
         self,
         idea_file: str,
