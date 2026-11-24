@@ -647,7 +647,7 @@ def generate_figure_visuals(
     task_name: str,
     figure_description: str,
     model_name: str = "gemini-3.1-pro-preview",
-    image_model_name: str = "gemini-3-pro-image-preview",
+    image_model_name: str = "gemini-3-pro-image",
     aspect_ratio: str = "16:9",
 ) -> str:
     """

@@ -32,7 +32,7 @@ def process_single_figure(
     fig_plan,
     raw_materials_dir,
     model_name="gemini-3.1-pro-preview",
-    image_model_name="gemini-3-pro-image-preview",
+    image_model_name="gemini-3-pro-image",
     max_critic_rounds=3,
 ):
     print(f"Processing figure: {fig_plan.get('figure_id', 'Unknown')}")
@@ -205,7 +205,7 @@ class PlottingAgent:
     def __init__(
         self,
         model_name: str = "gemini-3.1-pro-preview",
-        image_model_name: str = "gemini-3-pro-image-preview",
+        image_model_name: str = "gemini-3-pro-image",
         max_critic_rounds: int = 3,
     ):
         self.model_name = model_name

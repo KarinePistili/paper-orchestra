@@ -18,7 +18,6 @@ import os
 import shutil
 from datetime import datetime
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="CLI for generating a single paper from the Paper Orchestra pipeline."
@@ -77,8 +76,8 @@ def main():
     )
     parser.add_argument(
         "--image_model_name",
-        default="gemini-3-pro-image-preview",
-        help="Vision model if required by plotting agent.",
+        default="gemini-3-pro-image",
+        help="Image generation model for the plotting agent.",
     )
     parser.add_argument(
         "--plotting_max_critic_rounds",
@@ -88,6 +87,9 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.use_plotting and not args.image_model_name.strip():
+        parser.error("--image_model_name must not be empty")
 
     if args.research_cutoff is None:
         args.research_cutoff = datetime.now().strftime("%Y-%m")

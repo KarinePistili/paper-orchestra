@@ -5,3 +5,4 @@
 datasets/*
 paper_output*
 *.zip
+demo_logs/

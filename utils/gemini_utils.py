@@ -174,6 +174,10 @@ def call_gemini_with_contents(
     genai_client = get_genai_client()
     for attempt in range(max_retries):
         try:
+            print(
+                f"Calling Gemini API (model={model_name}, attempt={attempt + 1}/{max_retries}).",
+                flush=True,
+            )
             response = genai_client.models.generate_content(
                 model=model_name,
                 contents=contents,
@@ -199,7 +203,7 @@ def call_gemini_with_contents(
         except Exception as e:
             error_msg = str(e)
             print(
-                f"Warning: Gemini API call failed on attempt {attempt + 1} of {max_retries}. Error: {error_msg}",
+                f"Warning: Gemini API call (model={model_name}) failed on attempt {attempt + 1} of {max_retries}. Error: {error_msg}",
             )
 
             if (
@@ -305,6 +309,10 @@ def generate_image_with_gemini(
             }
             config_args.update(generation_configs)
 
+            print(
+                f"Calling Gemini API for image generation (model={model_name}, attempt={attempt + 1}/{max_retries}).",
+                flush=True,
+            )
             response = genai_client.models.generate_content(
                 model=model_name,
                 contents=[types.Part.from_text(text=prompt)],
@@ -339,7 +347,9 @@ def generate_image_with_gemini(
 
                             return img_base64
         except Exception as e:
-            print(f"Warning: Gemini API image generation failed {e}.")
+            print(
+                f"Warning: Gemini API image generation (model={model_name}) failed: {e}."
+            )
             if attempt + 1 == max_retries:
                 print(
                     f"Error: All {max_retries} retry attempts failed for image generation."

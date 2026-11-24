@@ -102,7 +102,9 @@ class ReferenceF1V1Evaluator:
 
         # Parallel extraction of titles from citation strings
         cleaned_titles = Parallel(n_jobs=10, backend="threading")(
-            delayed(extract_paper_title_from_citation)(ref)
+            delayed(extract_paper_title_from_citation)(
+                ref, model_name=self.model_name
+            )
             for ref in tqdm(cleaned_refs, desc="Extracting Titles from Text")
         )
 

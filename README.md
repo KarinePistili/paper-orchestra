@@ -75,6 +75,7 @@ python paper_writing_cli.py \
 *   `--use_plotting`: Enable the plotting agent workflow to generate figures from code (Default: `False`).
 *   `--writer_model_name`: LLM for writer and literature agents.
 *   `--reflection_model_name`: LLM for reflection agents.
+*   `--image_model_name`: Image generation model for the plotting agent (default: `gemini-3-pro-image`).
 
 ### Interactive Demo
 

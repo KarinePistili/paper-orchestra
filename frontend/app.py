@@ -18,6 +18,7 @@ import json
 import sys
 import time
 import threading
+import queue
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -30,7 +31,6 @@ import tempfile
 import datetime
 import io
 import zipfile
-from streamlit.runtime.scriptrunner import add_script_run_ctx
 import signal
 import ctypes
 from frontend_utils import send_notification_email
@@ -107,6 +107,27 @@ def initialize_session_state():
 initialize_session_state()
 
 
+def update_pipeline_state():
+    events = st.session_state.get("pipeline_events")
+    if events is None:
+        return
+    while True:
+        try:
+            event = events.get_nowait()
+        except queue.Empty:
+            break
+        if event[0] == "log":
+            st.session_state.logs[event[1]] += event[2]
+        elif event[0] == "step":
+            st.session_state.current_step = event[1]
+        elif event[0] == "finished":
+            st.session_state.running = False
+            st.session_state.thread_started = False
+
+
+update_pipeline_state()
+
+
 def render_sidebar():
     st.sidebar.title("🎻 Configuration")
 
@@ -142,15 +163,28 @@ def render_sidebar():
         except Exception as exception_object:
             st.sidebar.error(f"Error loading example: {exception_object}")
 
-    models = ["gemini-3.1-pro-preview", "gemini-3-flash-preview"]
+    models = [
+        "gemini-3.1-pro-preview",
+        "gemini-3-flash-preview",
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash",
+        "gemini-3.6-flash",
+        "gemini-4-argon",
+        "gemini-4-neon",
+    ]
     selected_model = st.sidebar.selectbox(
         "Select Model", models, disabled=st.session_state.locked
     )
+    st.sidebar.caption(
+        "Text model for the outline, literature review, writing, refinement, and figure planning."
+    )
+    image_model_slot = st.sidebar.empty()
 
     templates = ["cvpr2025", "iclr2025"]
     selected_template = st.sidebar.selectbox(
         "Select Template", templates, disabled=st.session_state.locked
     )
+    st.sidebar.caption("LaTeX template and formatting guidelines for the paper.")
 
     plotting_options = ["Yes", "No"]
     enable_plotting = st.sidebar.selectbox(
@@ -159,9 +193,22 @@ def render_sidebar():
         index=0,
         disabled=st.session_state.locked,
     )
+    st.sidebar.caption(
+        "Generate figures automatically. Select No to use only uploaded figures."
+    )
+
+    image_model_container = image_model_slot.container()
+    selected_image_model = image_model_container.selectbox(
+        "Select Image Model",
+        ["gemini-3-pro-image", "gemini-3.1-flash-lite-image"],
+        disabled=st.session_state.locked or enable_plotting == "No",
+    )
+    image_model_container.caption(
+        "Image model for generated diagrams; plots use the text model to generate code."
+    )
 
     st.sidebar.markdown(
-        "Your Email (for notification) <span style='color:red'>*</span>",
+        "Your Email (optional, for notification)",
         unsafe_allow_html=True,
     )
     email_input = st.sidebar.text_input(
@@ -170,21 +217,30 @@ def render_sidebar():
         label_visibility="collapsed",
         disabled=st.session_state.locked,
     )
+    st.sidebar.caption("Optional address for a notification when generation succeeds.")
 
     if st.sidebar.button("Confirm Email", disabled=st.session_state.locked):
         if st.session_state.get("email_input"):
             st.session_state.email_confirmed = True
         else:
             st.session_state.email_confirmed = False
-            st.sidebar.warning("⚠️ Please enter an email address first.")
+            st.sidebar.info("No email provided; email notifications are disabled.")
 
     if st.session_state.get("email_confirmed"):
         st.sidebar.success("📧 Email confirmed successfully!")
 
-    return selected_model, selected_template, enable_plotting, email_input
+    return (
+        selected_model,
+        selected_image_model,
+        selected_template,
+        enable_plotting,
+        email_input,
+    )
 
 
-selected_model, selected_template, enable_plotting, email_input = render_sidebar()
+selected_model, selected_image_model, selected_template, enable_plotting, email_input = (
+    render_sidebar()
+)
 
 # ------------------------------------------------------------------------
 # UI COMPONENT FUNCTIONS
@@ -300,7 +356,12 @@ def render_pdf_and_snapshots(pdf_path, snapshots_directory, download_key):
 
 
 def handle_live_execution(
-    steps, email_input, selected_template, selected_model, enable_plotting
+    steps,
+    email_input,
+    selected_template,
+    selected_model,
+    selected_image_model,
+    enable_plotting,
 ):
     if st.session_state.running:
 
@@ -308,10 +369,9 @@ def handle_live_execution(
             if (
                 not st.session_state.get("saved_idea")
                 or not st.session_state.get("saved_log")
-                or not st.session_state.get("email_input")
             ):
                 st.session_state.error_message = (
-                    "❌ Please fill in all required fields (Idea, Log, and Email)."
+                    "❌ Please fill in all required fields (Idea and Log)."
                 )
                 st.session_state.running = False
                 st.session_state.locked = False
@@ -362,9 +422,12 @@ def handle_live_execution(
                         "--plotting_model_name",
                         selected_model,
                         "--image_model_name",
-                        "gemini-3-pro-image-preview",
+                        selected_image_model,
                     ]
                 )
+
+            events = queue.Queue()
+            st.session_state.pipeline_events = events
 
             def run_pipeline(
                 execution_command,
@@ -420,7 +483,7 @@ def handle_live_execution(
                     )
 
                     current_step_name = steps_list[0]
-                    st.session_state.current_step = 0
+                    events.put(("step", 0))
 
                     while True:
                         line = process.stdout.readline()
@@ -437,28 +500,28 @@ def handle_live_execution(
                                 or "Saved figures/" in line
                                 or "[DEBUG] Starting run_plotting_agent" in line
                             ):
-                                st.session_state.logs["Figure Plotting"] += line
+                                events.put(("log", "Figure Plotting", line))
                             else:
                                 if "Starting Fast Hybrid Literature Agent" in line:
-                                    st.session_state.current_step = 1
+                                    events.put(("step", 1))
                                     current_step_name = steps_list[1]
                                 elif "Agent SectionWritingAgent starting" in line:
-                                    st.session_state.current_step = 2
+                                    events.put(("step", 2))
                                     current_step_name = steps_list[2]
                                 elif (
                                     "=== Initial Baseline Review ===" in line
                                     or "Starting dedicated formatting loop" in line
                                 ):
-                                    st.session_state.current_step = 3
+                                    events.put(("step", 3))
                                     current_step_name = steps_list[3]
 
-                                st.session_state.logs[current_step_name] += line
+                                events.put(("log", current_step_name, line))
 
                     if process.poll() == 0:
-                        st.session_state.current_step = len(steps_list)
+                        events.put(("step", len(steps_list)))
                         if recipient_email:
                             attachments = []
-                            run_dir = st.session_state.run_directory
+                            run_dir = run_directory
 
                             # 1. Final PDF
                             final_pdf = os.path.join(run_dir, "final_paper.pdf")
@@ -509,22 +572,37 @@ def handle_live_execution(
                                             attachments.append(zip_output_base + ".zip")
                                 except Exception as e:
                                     print(f" >> Error preparing latex zip: {e}")
-                                    st.session_state.logs[
-                                        "Content Refinement"
-                                    ] += f"\n❌ Error preparing latex zip: {e}"
+                                    events.put(
+                                        (
+                                            "log",
+                                            "Content Refinement",
+                                            f"\n❌ Error preparing latex zip: {e}",
+                                        )
+                                    )
 
                             send_notification_email(
                                 recipient_email,
                                 "Generated Paper",
                                 attachments=attachments,
                             )
+                    else:
+                        events.put(
+                            (
+                                "log",
+                                current_step_name,
+                                f"\n❌ Pipeline exited with code {process.returncode}.\n",
+                            )
+                        )
                 except Exception as exception_object:
-                    st.session_state.logs[
-                        "Content Refinement"
-                    ] += f"\n❌ Error in thread: {exception_object}"
+                    events.put(
+                        (
+                            "log",
+                            "Content Refinement",
+                            f"\n❌ Error in thread: {exception_object}",
+                        )
+                    )
                 finally:
-                    st.session_state.running = False
-                    st.session_state.thread_started = False
+                    events.put(("finished",))
 
             worker_thread = threading.Thread(
                 target=run_pipeline,
@@ -538,7 +616,6 @@ def handle_live_execution(
                     list(st.session_state.figures),
                 ),
             )
-            add_script_run_ctx(worker_thread)
             worker_thread.start()
             st.rerun()
 
@@ -1078,5 +1155,10 @@ else:
                 st.info("No refinement progress available yet.")
 
     handle_live_execution(
-        steps, email_input, selected_template, selected_model, enable_plotting
+        steps,
+        email_input,
+        selected_template,
+        selected_model,
+        selected_image_model,
+        enable_plotting,
     )

@@ -462,7 +462,7 @@ class HybridLiteratureAgent:
             """
 
         response_dict = call_gemini_with_contents(
-            model_name="gemini-3-flash-preview",
+            model_name=self.model_name,
             contents=[prompt],
             generation_configs={
                 "tools": [self.google_search_tool],

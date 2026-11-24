@@ -132,6 +132,10 @@ def call_openai_models_with_content(
 
             messages.append({"role": "user", "content": content})
 
+            print(
+                f"Calling OpenAI API (model={model_name}, attempt={attempt + 1}/{max_retries}).",
+                flush=True,
+            )
             response = openai_client.chat.completions.create(
                 model=model_name,
                 messages=messages,

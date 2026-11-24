@@ -27,6 +27,8 @@ DOCKER_UID="$(id -u)" DOCKER_GID="$(id -g)" docker compose up --build
 
 Open [http://localhost:8501](http://localhost:8501). The container runs Linux, including when Docker Desktop is used on macOS. Create a root `.env` file with the API credentials needed by the selected model; Compose passes it to the running container, and `.dockerignore` keeps it out of the image. Generated run data is available in the root `demo_logs/` directory.
 
+Use **Select Image Model** in the sidebar to choose between `gemini-3-pro-image` and `gemini-3.1-flash-lite-image` independently of the text model.
+
 Stop the demo with `Ctrl+C`, or run `docker compose down` from the project root.
 
 ## How to Kill Unfinished Writing Processes

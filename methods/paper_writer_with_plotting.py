@@ -41,7 +41,7 @@ def write_single_paper(
     writer_model_name: str = "gemini-3.1-pro-preview",
     reflection_model_name: str = "gemini-3.1-pro-preview",
     plotting_model_name: str = "gemini-3.1-pro-preview",
-    image_model_name: str = "gemini-3-pro-image-preview",
+    image_model_name: str = "gemini-3-pro-image",
     research_cutoff: str = "2024-11",
     plotting_max_critic_rounds: int = 3,
 ):
@@ -439,7 +439,7 @@ def run_batch_writeup(
     experimental_log_filename: str = "experimental_log.md",
     writer_model_name: str = "gemini-3.1-pro-preview",
     plotting_model_name: str = "gemini-3.1-pro-preview",
-    image_model_name: str = "gemini-3-pro-image-preview",
+    image_model_name: str = "gemini-3-pro-image",
     plotting_max_critic_rounds: int = 3,
     research_cutoff: str = "2024-11",
     n_papers=-1,
